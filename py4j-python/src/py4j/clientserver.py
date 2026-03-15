@@ -430,6 +430,8 @@ class ClientServerConnection(object):
     def connect_to_java_server(self):
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # Disable Nagle's algorithm for lower latency on small messages
+            self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             if self.java_parameters.read_timeout:
                 self.socket.settimeout(self.java_parameters.read_timeout)
             if self.ssl_context:

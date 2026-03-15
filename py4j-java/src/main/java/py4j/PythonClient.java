@@ -191,6 +191,8 @@ public class PythonClient extends CallbackClient implements Py4JPythonClientPerT
 		logger.info("Starting Python Client connection on " + address + " at " + port);
 		Socket socket = socketFactory.createSocket(address, port);
 		socket.setSoTimeout(readTimeout);
+		// Disable Nagle's algorithm for lower latency on small messages
+		socket.setTcpNoDelay(true);
 		return socket;
 	}
 

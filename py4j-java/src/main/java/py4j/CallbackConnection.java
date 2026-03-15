@@ -225,6 +225,8 @@ public class CallbackConnection implements Py4JClientConnection {
 		logger.info("Starting Communication Channel on " + address + " at " + port);
 		socket = socketFactory.createSocket(address, port);
 		socket.setSoTimeout(blockingReadTimeout);
+		// Disable Nagle's algorithm for lower latency on small messages
+		socket.setTcpNoDelay(true);
 		reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), Charset.forName("UTF-8")));
 		writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), Charset.forName("UTF-8")));
 

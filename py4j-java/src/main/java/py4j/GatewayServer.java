@@ -657,6 +657,8 @@ public class GatewayServer extends DefaultGatewayServerListener implements Py4JJ
 			lock.lock();
 			if (!isShutdown) {
 				socket.setSoTimeout(readTimeout);
+				// Disable Nagle's algorithm for lower latency on small messages
+				socket.setTcpNoDelay(true);
 				Py4JServerConnection gatewayConnection = createConnection(gateway, socket);
 				connections.add(gatewayConnection);
 				fireConnectionStarted(gatewayConnection);

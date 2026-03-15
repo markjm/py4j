@@ -1149,6 +1149,8 @@ class GatewayConnection(object):
         self.port = gateway_parameters.port
         af_type = socket.getaddrinfo(self.address, self.port)[0][0]
         self.socket = socket.socket(af_type, socket.SOCK_STREAM)
+        # Disable Nagle's algorithm for lower latency on small messages
+        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         if gateway_parameters.read_timeout:
             self.socket.settimeout(gateway_parameters.read_timeout)
         if gateway_parameters.ssl_context:
