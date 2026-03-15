@@ -23,6 +23,7 @@ from py4j.java_gateway import (
     CallbackServerParameters, GatewayParameters, CallbackServer,
     GatewayConnectionGuard, DEFAULT_ADDRESS, DEFAULT_PORT,
     DEFAULT_PYTHON_PROXY_PORT, DEFAULT_ACCEPT_TIMEOUT_PLACEHOLDER,
+    DEFAULT_BUFFER_SIZE,
     server_connection_stopped, do_client_auth, _garbage_collect_proxy)
 from py4j import protocol as proto
 from py4j.protocol import (
@@ -67,7 +68,7 @@ class JavaParameters(GatewayParameters):
             auto_close=True, auto_convert=False, eager_load=False,
             ssl_context=None, enable_memory_management=True, auto_gc=False,
             read_timeout=None, daemonize_memory_management=True,
-            auth_token=None):
+            auth_token=None, buffer_size=DEFAULT_BUFFER_SIZE):
         """
 
         :param address: the address to which the client will request a
@@ -121,10 +122,15 @@ class JavaParameters(GatewayParameters):
 
         :param auth_token: if provided, an authentication that token clients
             must provide to the server when connecting.
+
+        :param buffer_size: the size of the buffer used for socket read
+            operations. Default is 16384 (16KB). Larger values may improve
+            performance for bulk data transfers.
         """
         super(JavaParameters, self).__init__(
             address, port, auto_field, auto_close, auto_convert, eager_load,
-            ssl_context, enable_memory_management, read_timeout, auth_token)
+            ssl_context, enable_memory_management, read_timeout, auth_token,
+            buffer_size)
         self.auto_gc = auto_gc
         self.daemonize_memory_management = daemonize_memory_management
 
@@ -140,7 +146,7 @@ class PythonParameters(CallbackServerParameters):
             ssl_context=None, auto_gc=False,
             accept_timeout=DEFAULT_ACCEPT_TIMEOUT_PLACEHOLDER,
             read_timeout=None, propagate_java_exceptions=False,
-            auth_token=None):
+            auth_token=None, buffer_size=DEFAULT_BUFFER_SIZE):
         """
         :param address: the address to which the client will request a
             connection
@@ -188,11 +194,15 @@ class PythonParameters(CallbackServerParameters):
 
         :param auth_token: if provided, an authentication token that clients
             must provide to the server when connecting.
+
+        :param buffer_size: the size of the buffer used for socket read
+            operations. Default is 16384 (16KB). Larger values may improve
+            performance for bulk data transfers.
         """
         super(PythonParameters, self).__init__(
             address, port, daemonize, daemonize_connections, eager_load,
             ssl_context, accept_timeout, read_timeout,
-            propagate_java_exceptions, auth_token)
+            propagate_java_exceptions, auth_token, buffer_size)
         self.auto_gc = auto_gc
 
 
@@ -436,7 +446,8 @@ class ClientServerConnection(object):
                 self.socket = self.ssl_context.wrap_socket(
                     self.socket, server_hostname=self.java_address)
             self.socket.connect((self.java_address, self.java_port))
-            self.stream = self.socket.makefile("rb")
+            self.stream = self.socket.makefile(
+                "rb", buffering=self.java_parameters.buffer_size)
             self.is_connected = True
             self.initiated_from_client = True
 

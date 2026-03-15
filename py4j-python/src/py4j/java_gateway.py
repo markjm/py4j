@@ -56,6 +56,7 @@ DEFAULT_PORT = 25333
 DEFAULT_PYTHON_PROXY_PORT = 25334
 DEFAULT_ACCEPT_TIMEOUT_PLACEHOLDER = "DEFAULT"
 DEFAULT_CALLBACK_SERVER_ACCEPT_TIMEOUT = 5
+DEFAULT_BUFFER_SIZE = 16384
 PY4J_SKIP_COLLECTIONS = "PY4J_SKIP_COLLECTIONS"
 PY4J_TRUE = {"yes", "y", "t", "true"}
 
@@ -756,7 +757,8 @@ class GatewayParameters(object):
             self, address=DEFAULT_ADDRESS, port=DEFAULT_PORT, auto_field=False,
             auto_close=True, auto_convert=False, eager_load=False,
             ssl_context=None, enable_memory_management=True,
-            read_timeout=None, auth_token=None):
+            read_timeout=None, auth_token=None,
+            buffer_size=DEFAULT_BUFFER_SIZE):
         """
         :param address: the address to which the client will request a
             connection. If you're assing a `SSLContext` with
@@ -797,6 +799,10 @@ class GatewayParameters(object):
 
         :param auth_token: if provided, an authentication that token clients
             must provide to the server when connecting.
+
+        :param buffer_size: the size of the buffer used for socket read
+            operations. Default is 16384 (16KB). Larger values may improve
+            performance for bulk data transfers.
         """
         self.address = address
         self.port = port
@@ -808,6 +814,7 @@ class GatewayParameters(object):
         self.enable_memory_management = enable_memory_management
         self.read_timeout = read_timeout
         self.auth_token = escape_new_line(auth_token)
+        self.buffer_size = buffer_size
 
 
 class CallbackServerParameters(object):
@@ -821,7 +828,7 @@ class CallbackServerParameters(object):
             ssl_context=None,
             accept_timeout=DEFAULT_ACCEPT_TIMEOUT_PLACEHOLDER,
             read_timeout=None, propagate_java_exceptions=False,
-            auth_token=None):
+            auth_token=None, buffer_size=DEFAULT_BUFFER_SIZE):
         """
         :param address: the address to which the client will request a
             connection
@@ -863,6 +870,10 @@ class CallbackServerParameters(object):
 
         :param auth_token: if provided, an authentication token that clients
             must provide to the server when connecting.
+
+        :param buffer_size: the size of the buffer used for socket read
+            operations. Default is 16384 (16KB). Larger values may improve
+            performance for bulk data transfers.
         """
         self.address = address
         self.port = port
@@ -879,6 +890,7 @@ class CallbackServerParameters(object):
         self.read_timeout = read_timeout
         self.propagate_java_exceptions = propagate_java_exceptions
         self.auth_token = escape_new_line(auth_token)
+        self.buffer_size = buffer_size
 
 
 class DummyRLock(object):
@@ -1168,7 +1180,8 @@ class GatewayConnection(object):
         """
         try:
             self.socket.connect((self.address, self.port))
-            self.stream = self.socket.makefile("rb")
+            self.stream = self.socket.makefile(
+                "rb", buffering=self.gateway_parameters.buffer_size)
             self.is_connected = True
 
             self._authenticate_connection()
@@ -2335,7 +2348,9 @@ class CallbackServer(object):
                     if self.ssl_context:
                         socket_instance = self.ssl_context.wrap_socket(
                             socket_instance, server_side=True)
-                    input = socket_instance.makefile("rb")
+                    input = socket_instance.makefile(
+                        "rb",
+                        buffering=self.callback_server_parameters.buffer_size)
                     connection = self._create_connection(
                         socket_instance, input)
                     with self.lock:

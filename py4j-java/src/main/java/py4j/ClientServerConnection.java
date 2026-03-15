@@ -72,10 +72,19 @@ public class ClientServerConnection implements Py4JServerConnection, Py4JClientC
 	public ClientServerConnection(Gateway gateway, Socket socket, List<Class<? extends Command>> customCommands,
 			Py4JPythonClientPerThread pythonClient, Py4JJavaServer javaServer, int readTimeout, String authToken)
 					throws IOException {
+		this(gateway, socket, customCommands, pythonClient, javaServer, readTimeout, authToken,
+				GatewayServer.DEFAULT_BUFFER_SIZE);
+	}
+
+	public ClientServerConnection(Gateway gateway, Socket socket, List<Class<? extends Command>> customCommands,
+			Py4JPythonClientPerThread pythonClient, Py4JJavaServer javaServer, int readTimeout, String authToken,
+			int bufferSize) throws IOException {
 		super();
 		this.socket = socket;
-		this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), Charset.forName("UTF-8")));
-		this.writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), Charset.forName("UTF-8")));
+		this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), Charset.forName("UTF-8")),
+				bufferSize);
+		this.writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), Charset.forName("UTF-8")),
+				bufferSize);
 		this.commands = new HashMap<String, Command>();
 		initCommands(gateway, GatewayConnection.getBaseCommands());
 		if (customCommands != null) {

@@ -76,6 +76,8 @@ public class CallbackConnection implements Py4JClientConnection {
 
 	private final String authToken;
 
+	private final int bufferSize;
+
 	public CallbackConnection(int port, InetAddress address) {
 		this(port, address, SocketFactory.getDefault());
 	}
@@ -113,6 +115,24 @@ public class CallbackConnection implements Py4JClientConnection {
 	 */
 	public CallbackConnection(int port, InetAddress address, SocketFactory socketFactory, int readTimeout,
 			String authToken) {
+		this(port, address, socketFactory, readTimeout, authToken, GatewayServer.DEFAULT_BUFFER_SIZE);
+	}
+
+	/**
+	 *
+	 * @param port The port used to connect to the Python side.
+	 * @param address The address used to connect to the Java side.
+	 * @param socketFactory The socket factory used to create a socket (connection) to the Python side.
+	 * @param readTimeout
+	 *            Time in milliseconds (0 = infinite). Once connected to the Python side,
+	 *            if the Java side does not receive a response after this time, the connection with the Python
+	 *            program is closed. If readTimeout = 0, a default readTimeout of 1000 is used for operations that
+	 *            must absolutely be non-blocking.
+	 * @param authToken Token for authenticating with the callback server.
+	 * @param bufferSize The buffer size for socket I/O operations.
+	 */
+	public CallbackConnection(int port, InetAddress address, SocketFactory socketFactory, int readTimeout,
+			String authToken, int bufferSize) {
 		super();
 		this.port = port;
 		this.address = address;
@@ -124,6 +144,7 @@ public class CallbackConnection implements Py4JClientConnection {
 			this.nonBlockingReadTimeout = DEFAULT_NONBLOCKING_SO_TIMEOUT;
 		}
 		this.authToken = authToken;
+		this.bufferSize = bufferSize;
 	}
 
 	public String sendCommand(String command) {
@@ -225,8 +246,10 @@ public class CallbackConnection implements Py4JClientConnection {
 		logger.info("Starting Communication Channel on " + address + " at " + port);
 		socket = socketFactory.createSocket(address, port);
 		socket.setSoTimeout(blockingReadTimeout);
-		reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), Charset.forName("UTF-8")));
-		writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), Charset.forName("UTF-8")));
+		reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), Charset.forName("UTF-8")),
+				bufferSize);
+		writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), Charset.forName("UTF-8")),
+				bufferSize);
 
 		if (authToken != null) {
 			try {

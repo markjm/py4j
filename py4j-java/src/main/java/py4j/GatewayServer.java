@@ -98,6 +98,8 @@ public class GatewayServer extends DefaultGatewayServerListener implements Py4JJ
 
 	public static final int DEFAULT_READ_TIMEOUT = 0;
 
+	public static final int DEFAULT_BUFFER_SIZE = 16384;
+
 	public static final String GATEWAY_SERVER_ID = Protocol.GATEWAY_SERVER_ID;
 
 	public static final Logger PY4J_LOGGER = Logger.getLogger("py4j");
@@ -156,6 +158,8 @@ public class GatewayServer extends DefaultGatewayServerListener implements Py4JJ
 	private final ServerSocketFactory sSocketFactory;
 
 	protected final String authToken;
+
+	private final int bufferSize;
 
 	private ServerSocket sSocket;
 
@@ -418,6 +422,13 @@ public class GatewayServer extends DefaultGatewayServerListener implements Py4JJ
 	GatewayServer(Object entryPoint, int port, InetAddress address, int connectTimeout, int readTimeout,
 			List<Class<? extends Command>> customCommands, Py4JPythonClient cbClient,
 			ServerSocketFactory sSocketFactory, String authToken) {
+		this(entryPoint, port, address, connectTimeout, readTimeout, customCommands, cbClient, sSocketFactory,
+				authToken, DEFAULT_BUFFER_SIZE);
+	}
+
+	GatewayServer(Object entryPoint, int port, InetAddress address, int connectTimeout, int readTimeout,
+			List<Class<? extends Command>> customCommands, Py4JPythonClient cbClient,
+			ServerSocketFactory sSocketFactory, String authToken, int bufferSize) {
 		super();
 		this.port = port;
 		this.address = address;
@@ -435,6 +446,7 @@ public class GatewayServer extends DefaultGatewayServerListener implements Py4JJ
 		this.listeners = new CopyOnWriteArrayList<GatewayServerListener>();
 		this.sSocketFactory = sSocketFactory;
 		this.authToken = authToken;
+		this.bufferSize = bufferSize;
 	}
 
 	/**
@@ -453,6 +465,13 @@ public class GatewayServer extends DefaultGatewayServerListener implements Py4JJ
 
 	private GatewayServer(Gateway gateway, int port, InetAddress address, int connectTimeout, int readTimeout,
 			List<Class<? extends Command>> customCommands, ServerSocketFactory sSocketFactory, String authToken) {
+		this(gateway, port, address, connectTimeout, readTimeout, customCommands, sSocketFactory, authToken,
+				DEFAULT_BUFFER_SIZE);
+	}
+
+	private GatewayServer(Gateway gateway, int port, InetAddress address, int connectTimeout, int readTimeout,
+			List<Class<? extends Command>> customCommands, ServerSocketFactory sSocketFactory, String authToken,
+			int bufferSize) {
 		super();
 		this.port = port;
 		this.address = address;
@@ -470,6 +489,7 @@ public class GatewayServer extends DefaultGatewayServerListener implements Py4JJ
 		this.listeners = new CopyOnWriteArrayList<GatewayServerListener>();
 		this.sSocketFactory = sSocketFactory;
 		this.authToken = authToken;
+		this.bufferSize = bufferSize;
 	}
 
 	public void addListener(GatewayServerListener listener) {
@@ -499,7 +519,8 @@ public class GatewayServer extends DefaultGatewayServerListener implements Py4JJ
 	 * @throws IOException
 	 */
 	protected Py4JServerConnection createConnection(Gateway gateway, Socket socket) throws IOException {
-		GatewayConnection connection = new GatewayConnection(gateway, socket, authToken, customCommands, listeners);
+		GatewayConnection connection = new GatewayConnection(gateway, socket, authToken, customCommands, listeners,
+				bufferSize);
 		connection.startConnection();
 		return connection;
 	}
@@ -650,6 +671,10 @@ public class GatewayServer extends DefaultGatewayServerListener implements Py4JJ
 
 	public int getReadTimeout() {
 		return readTimeout;
+	}
+
+	public int getBufferSize() {
+		return bufferSize;
 	}
 
 	protected void processSocket(Socket socket) {
@@ -911,6 +936,7 @@ public class GatewayServer extends DefaultGatewayServerListener implements Py4JJ
 		private InetAddress javaAddress;
 		private int connectTimeout;
 		private int readTimeout;
+		private int bufferSize;
 		private Gateway gateway;
 		private ServerSocketFactory serverSocketFactory;
 		private Object entryPoint;
@@ -927,6 +953,7 @@ public class GatewayServer extends DefaultGatewayServerListener implements Py4JJ
 			javaAddress = GatewayServer.defaultAddress();
 			connectTimeout = GatewayServer.DEFAULT_CONNECT_TIMEOUT;
 			readTimeout = GatewayServer.DEFAULT_READ_TIMEOUT;
+			bufferSize = GatewayServer.DEFAULT_BUFFER_SIZE;
 			serverSocketFactory = ServerSocketFactory.getDefault();
 			this.entryPoint = entryPoint;
 		}
@@ -945,10 +972,10 @@ public class GatewayServer extends DefaultGatewayServerListener implements Py4JJ
 					callbackClient = new CallbackClient(GatewayServer.DEFAULT_PYTHON_PORT);
 				}
 				return new GatewayServer(entryPoint, javaPort, javaAddress, connectTimeout, readTimeout, customCommands,
-						callbackClient, serverSocketFactory, authToken);
+						callbackClient, serverSocketFactory, authToken, bufferSize);
 			} else {
 				return new GatewayServer(gateway, javaPort, javaAddress, connectTimeout, readTimeout, customCommands,
-						serverSocketFactory, authToken);
+						serverSocketFactory, authToken, bufferSize);
 			}
 		}
 
@@ -1018,6 +1045,16 @@ public class GatewayServer extends DefaultGatewayServerListener implements Py4JJ
 		 */
 		public GatewayServerBuilder authToken(String authToken) {
 			this.authToken = StringUtil.escape(authToken);
+			return this;
+		}
+
+		/**
+		 * Sets the buffer size for socket I/O operations.
+		 *
+		 * @param bufferSize The buffer size in bytes. Default is 16384.
+		 */
+		public GatewayServerBuilder bufferSize(int bufferSize) {
+			this.bufferSize = bufferSize;
 			return this;
 		}
 	}

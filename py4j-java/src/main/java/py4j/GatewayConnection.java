@@ -133,6 +133,12 @@ public class GatewayConnection implements Runnable, Py4JServerConnection {
 
 	public GatewayConnection(Gateway gateway, Socket socket, String authToken,
 			List<Class<? extends Command>> customCommands, List<GatewayServerListener> listeners) throws IOException {
+		this(gateway, socket, authToken, customCommands, listeners, GatewayServer.DEFAULT_BUFFER_SIZE);
+	}
+
+	public GatewayConnection(Gateway gateway, Socket socket, String authToken,
+			List<Class<? extends Command>> customCommands, List<GatewayServerListener> listeners, int bufferSize)
+			throws IOException {
 		super();
 		this.socket = socket;
 		this.authToken = authToken;
@@ -141,8 +147,10 @@ public class GatewayConnection implements Runnable, Py4JServerConnection {
 		} else {
 			this.authCommand = null;
 		}
-		this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), Charset.forName("UTF-8")));
-		this.writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), Charset.forName("UTF-8")));
+		this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), Charset.forName("UTF-8")),
+				bufferSize);
+		this.writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), Charset.forName("UTF-8")),
+				bufferSize);
 		this.commands = new HashMap<String, Command>();
 		initCommands(gateway, baseCommands);
 		if (customCommands != null) {
